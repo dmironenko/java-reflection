@@ -1,6 +1,6 @@
 package org.example.classes;
 
-public class Rectangle implements Shape {
+public final class Rectangle extends Polygon {
     private double length;
     private double width;
 
