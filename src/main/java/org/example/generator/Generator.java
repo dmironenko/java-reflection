@@ -7,16 +7,15 @@ import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 public class Generator {
-    private static final int MAX_COLLECTION_SIZE = 3;
+    private static final int MAX_COLLECTION_SIZE = 5;
     private static final int MAX_STRING_LENGTH = 8;
-    private static final int MAX_REPEATED_CLASS = 3;
+    private static final int MAX_REPEATED_CLASS = 5;
 
     private final Random random;
 
@@ -95,49 +94,49 @@ public class Generator {
 
     private String generateString() {
         int length = random.nextInt(1, MAX_STRING_LENGTH + 1);
-        StringBuilder result = new StringBuilder(length);
+        StringBuilder res = new StringBuilder(length);
 
         for (int i = 0; i < length; i++) {
-            result.append(randomChar());
+            res.append(randomChar());
         }
 
-        return result.toString();
+        return res.toString();
     }
 
     private Object generateArray(Class<?> component, List<Class<?>> path) {
         int size = random.nextInt(1, MAX_COLLECTION_SIZE + 1);
-        Object result = Array.newInstance(component, size);
+        Object res = Array.newInstance(component, size);
 
         for (int i = 0; i < size; i++) {
-            Array.set(result, i, generate(component, path));
+            Array.set(res, i, generate(component, path));
         }
 
-        return result;
+        return res;
     }
 
     private List<Object> generateList(Type elementType, List<Class<?>> path) {
         int size = random.nextInt(1, MAX_COLLECTION_SIZE + 1);
-        List<Object> result = new ArrayList<>();
+        List<Object> res = new ArrayList<>();
 
         for (int i = 0; i < size; i++) {
-            result.add(generate(elementType, path));
+            res.add(generate(elementType, path));
         }
 
-        return result;
+        return res;
     }
 
     private Map<Object, Object> generateMap(Type keyType, Type valueType, List<Class<?>> path) {
         int size = random.nextInt(1, MAX_COLLECTION_SIZE + 1);
-        Map<Object, Object> result = new LinkedHashMap<>();
+        Map<Object, Object> res = new LinkedHashMap<>();
 
         for (int i = 0; i < size; i++) {
             Object key = generate(keyType, path);
             Object value = generate(valueType, path);
 
-            result.put(key, value);
+            res.put(key, value);
         }
 
-        return result;
+        return res;
     }
 
     private Object generateObject(Class<?> type, List<Class<?>> path) {
@@ -152,7 +151,13 @@ public class Generator {
             type = implementations[random.nextInt(implementations.length)];
         }
 
-        if (Collections.frequency(path, type) >= MAX_REPEATED_CLASS) {
+        int count = 0;
+        for (Class<?> visitedType : path) {
+            if (visitedType.equals(type)) {
+                count++;
+            }
+        }
+        if (count >= MAX_REPEATED_CLASS) {
             return null;
         }
 

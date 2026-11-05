@@ -136,18 +136,21 @@ class GeneratorTest {
         BinaryTreeNode root = generator.generateValueOfType(BinaryTreeNode.class);
 
         assertNotNull(root.getData());
-        assertNull(root.getLeft().getLeft().getLeft());
-        assertNull(root.getLeft().getLeft().getRight());
+        BinaryTreeNode fifth = root.getLeft().getLeft().getLeft().getLeft();
+        assertNull(fifth.getLeft());
+        assertNull(fifth.getRight());
     }
 
     @Test
     void collectionRecursion() {
         Branch root = generator.generateValueOfType(Branch.class);
 
-        Branch child = root.getChildren().get(0);
-        Branch grandchild = child.getChildren().get(0);
-
-        assertNull(grandchild.getChildren().get(0));
+        Branch current = root;
+        for (int i = 1; i < 5; i++) {
+            current = current.getChildren().get(0);
+            assertNotNull(current);
+        }
+        assertNull(current.getChildren().get(0));
     }
 
     @Test
