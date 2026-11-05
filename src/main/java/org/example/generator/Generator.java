@@ -52,41 +52,41 @@ public class Generator {
             throw new IllegalArgumentException("unsupported type: " + type.getTypeName());
         }
 
-        if (!(type instanceof Class<?> clazz)) {
+        if (!(type instanceof Class<?> cls)) {
             throw new IllegalArgumentException("unsupported type: " + type.getTypeName());
         }
 
-        if (clazz == void.class || clazz == Void.class) {
-            throw new IllegalArgumentException("cannot generate " + clazz.getName());
+        if (cls == void.class || cls == Void.class) {
+            throw new IllegalArgumentException("cannot generate " + cls.getName());
         }
 
-        if (clazz == byte.class || clazz == Byte.class) return (byte) random.nextInt();
-        if (clazz == short.class || clazz == Short.class) return (short) random.nextInt();
-        if (clazz == int.class || clazz == Integer.class) return random.nextInt();
-        if (clazz == long.class || clazz == Long.class) return random.nextLong();
-        if (clazz == float.class || clazz == Float.class) return random.nextFloat();
-        if (clazz == double.class || clazz == Double.class) return random.nextDouble();
+        if (cls == byte.class || cls == Byte.class) return (byte) random.nextInt();
+        if (cls == short.class || cls == Short.class) return (short) random.nextInt();
+        if (cls == int.class || cls == Integer.class) return random.nextInt();
+        if (cls == long.class || cls == Long.class) return random.nextLong();
+        if (cls == float.class || cls == Float.class) return random.nextFloat();
+        if (cls == double.class || cls == Double.class) return random.nextDouble();
 
-        if (clazz == boolean.class || clazz == Boolean.class) return random.nextBoolean();
+        if (cls == boolean.class || cls == Boolean.class) return random.nextBoolean();
 
-        if (clazz == char.class || clazz == Character.class) return randomChar();
-        if (clazz == String.class) return generateString();
+        if (cls == char.class || cls == Character.class) return randomChar();
+        if (cls == String.class) return generateString();
 
-        if (clazz.isEnum()) {
-            Object[] values = clazz.getEnumConstants();
+        if (cls.isEnum()) {
+            Object[] values = cls.getEnumConstants();
 
             if (values.length == 0) {
-                throw new IllegalArgumentException("enum has no constants: " + clazz.getName());
+                throw new IllegalArgumentException("enum has no constants: " + cls.getName());
             }
 
             return values[random.nextInt(values.length)];
         }
 
-        if (clazz.isArray()) return generateArray(clazz.getComponentType(), path);
-        if (clazz == List.class) return generateList(Integer.class, path);
-        if (clazz == Map.class) return generateMap(Integer.class, String.class, path);
+        if (cls.isArray()) return generateArray(cls.getComponentType(), path);
+        if (cls == List.class) return generateList(Integer.class, path);
+        if (cls == Map.class) return generateMap(Integer.class, String.class, path);
 
-        return generateObject(clazz, path);
+        return generateObject(cls, path);
     }
 
     private char randomChar() {
