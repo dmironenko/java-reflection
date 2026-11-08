@@ -2,8 +2,15 @@ package org.example.generator;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import java.awt.Point;
+import java.lang.reflect.InvocationTargetException;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.example.classes.BinaryTreeNode;
 import org.example.classes.Book;
 import org.example.classes.Branch;
@@ -132,11 +139,42 @@ class GeneratorTest {
     }
 
     @Test
+    void standardClassAndConstructors() {
+        BigInteger number = generator.generateValueOfType(BigInteger.class);
+        UUID id = generator.generateValueOfType(UUID.class);
+        BigDecimal decimal = generator.generateValueOfType(BigDecimal.class);
+        Point point = generator.generateValueOfType(Point.class);
+        AtomicInteger count = generator.generateValueOfType(AtomicInteger.class);
+        AtomicBoolean flag = generator.generateValueOfType(AtomicBoolean.class);
+        MultipleConstructors object = generator.generateValueOfType(MultipleConstructors.class);
+
+        assertEquals(number, new BigInteger(number.toByteArray()));
+        assertEquals(id, UUID.fromString(id.toString()));
+        assertEquals(decimal, new BigDecimal(decimal.toString()));
+        assertEquals(point, new Point(point.x, point.y));
+        assertEquals(count.get(), Integer.parseInt(count.toString()));
+        assertEquals(flag.get(), Boolean.parseBoolean(flag.toString()));
+        assertEquals(10, object.value);
+    }
+
+    @Test
+    void simpleInterfacesAndAbstractClasses() {
+        Simple simple = generator.generateValueOfType(Simple.class);
+        AbstractBase base = generator.generateValueOfType(AbstractBase.class);
+        Service service = generator.generateValueOfType(Service.class);
+
+        assertInstanceOf(SimpleImpl.class, simple);
+        assertInstanceOf(BaseImpl.class, base);
+        assertInstanceOf(ServiceImpl.class, service);
+    }
+
+    @Test
     void objectRecursion() {
         BinaryTreeNode root = generator.generateValueOfType(BinaryTreeNode.class);
 
-        assertNotNull(root.getData());
         BinaryTreeNode fifth = root.getLeft().getLeft().getLeft().getLeft();
+
+        assertNotNull(root.getData());
         assertNull(fifth.getLeft());
         assertNull(fifth.getRight());
     }
@@ -184,10 +222,41 @@ class GeneratorTest {
 
         assertTrue(emptyEnum.getMessage().contains(Empty.class.getName()));
         assertTrue(missingImplementation.getMessage().contains(Missing.class.getName()));
-        assertInstanceOf(IllegalStateException.class, constructorFailure.getCause());
+        assertInstanceOf(InvocationTargetException.class, constructorFailure.getCause());
+        assertInstanceOf(IllegalStateException.class, constructorFailure.getCause().getCause());
     }
 
     public interface Missing {}
+
+    public interface Simple {}
+
+    public interface Service {}
+
+    public static class ServiceImpl implements Service {
+        public ServiceImpl() {}
+    }
+
+    public static class SimpleImpl implements Simple {
+        public SimpleImpl() {}
+    }
+
+    public abstract static class AbstractBase {}
+
+    public static class BaseImpl extends AbstractBase {
+        public BaseImpl() {}
+    }
+
+    public static class MultipleConstructors {
+        private final int value;
+
+        public MultipleConstructors() {
+            throw new IllegalArgumentException("failed");
+        }
+
+        public MultipleConstructors(int value) {
+            this.value = 10;
+        }
+    }
 
     public static class ThrowsException {
         public ThrowsException() {

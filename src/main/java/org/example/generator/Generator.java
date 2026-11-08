@@ -2,11 +2,13 @@ package org.example.generator;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +20,7 @@ public class Generator {
     private static final int MAX_REPEATED_CLASS = 5;
 
     private final Random random;
+    private final Map<Class<?>, List<Class<?>>> implementations = new HashMap<>();
 
     public Generator() {
         random = new Random();
@@ -140,15 +143,22 @@ public class Generator {
     }
 
     private Object generateObject(Class<?> type, List<Class<?>> path) {
-        while (type.isInterface() || Modifier.isAbstract(type.getModifiers())) {
-            Class<?>[] implementations = type.getPermittedSubclasses();
+        if (type.isInterface() || Modifier.isAbstract(type.getModifiers())) {
+            List<Class<?>> classes = implementations.computeIfAbsent(type, ClassFinder::find);
 
-            if (implementations == null || implementations.length == 0) {
-                throw new IllegalStateException(
-                        "no permitted implementations for " + type.getName());
+            List<Class<?>> choices = new ArrayList<>(classes);
+            Exception error = null;
+            while (!choices.isEmpty()) {
+                Class<?> cls = choices.remove(random.nextInt(choices.size()));
+
+                try {
+                    return generateObject(cls, path);
+                } catch (IllegalArgumentException | IllegalStateException e) {
+                    error = e;
+                }
             }
 
-            type = implementations[random.nextInt(implementations.length)];
+            throw new IllegalStateException("no implementation for " + type.getName(), error);
         }
 
         int count = 0;
@@ -161,50 +171,57 @@ public class Generator {
             return null;
         }
 
-        Constructor<?> constructor = chooseConstructor(type);
+        List<Constructor<?>> constructors = chooseConstructors(type);
         path.add(type);
 
         try {
-            Type[] parameterTypes = constructor.getGenericParameterTypes();
-            Object[] arguments = new Object[parameterTypes.length];
+            Throwable error = null;
 
-            for (int i = 0; i < parameterTypes.length; i++) {
-                arguments[i] = generate(parameterTypes[i], path);
+            for (Constructor<?> constructor : constructors) {
+                try {
+                    Type[] parameterTypes = constructor.getGenericParameterTypes();
+                    Object[] arguments = new Object[parameterTypes.length];
+
+                    for (int i = 0; i < parameterTypes.length; i++) {
+                        arguments[i] = generate(parameterTypes[i], path);
+                    }
+
+                    return constructor.newInstance(arguments);
+                } catch (ReflectiveOperationException
+                        | IllegalArgumentException
+                        | IllegalStateException e) {
+                    error = e;
+                }
             }
 
-            return constructor.newInstance(arguments);
-        } catch (InvocationTargetException e) {
-            throw new IllegalStateException(
-                    "constructor failed for " + type.getName(), e.getCause());
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException("cannot create " + type.getName(), e);
+            throw new IllegalStateException("cannot create " + type.getName(), error);
         } finally {
             path.remove(path.size() - 1);
         }
     }
 
-    @SuppressWarnings("PMD.AvoidLiteralsInIfCondition")
-    private Constructor<?> chooseConstructor(Class<?> type) {
+    private List<Constructor<?>> chooseConstructors(Class<?> type) {
         Constructor<?>[] constructors = type.getConstructors();
 
-        if (constructors.length == 1) return constructors[0];
-
-        Constructor<?> selected = null;
+        Constructor<?> marked = null;
         for (Constructor<?> constructor : constructors) {
-            if (!constructor.isAnnotationPresent(Generatable.class)) continue;
-
-            if (selected != null) {
-                throw new IllegalStateException(
-                        "more than one @Generatable constructor in " + type.getName());
+            if (!constructor.isAnnotationPresent(Generatable.class)) {
+                continue;
             }
 
-            selected = constructor;
+            if (marked != null) {
+                throw new IllegalStateException(
+                        ">1 @Generatable constructors in " + type.getName());
+            }
+
+            marked = constructor;
+        }
+        if (marked != null) {
+            return List.of(marked);
         }
 
-        if (selected == null) {
-            throw new IllegalStateException("no suitable constructor: " + type.getName());
-        }
+        Arrays.sort(constructors, Comparator.comparingInt(Constructor::getParameterCount));
 
-        return selected;
+        return Arrays.asList(constructors);
     }
 }
