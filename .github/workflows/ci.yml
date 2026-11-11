@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: ${{ matrix.check }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - check: test
+            tasks: test
+
+          - check: build
+            tasks: assemble
+
+          - check: lint
+            tasks: spotlessCheck pmdMain pmdTest
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+
+      - run: ./gradlew ${{ matrix.tasks }} --no-daemon
